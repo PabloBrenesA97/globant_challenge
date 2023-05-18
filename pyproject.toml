@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "globant-challenge"
+version = "0.1.0"
+description = ""
+authors = ["PabloBrenesA97 <josepablobrenesalfaro@gmail.com>"]
+readme = "README.md"
+packages = [{include = "globant_challenge"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.95.2"
+uvicorn = {extras = ["standard"], version = "^0.22.0"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
