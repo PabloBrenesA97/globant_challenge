@@ -7,9 +7,15 @@ readme = "README.md"
 packages = [{include = "globant_challenge"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.12"
 fastapi = "^0.95.2"
 uvicorn = {extras = ["standard"], version = "^0.22.0"}
+python-multipart = "^0.0.6"
+boto3 = "^1.26.136"
+psycopg2-binary = "^2.9.6"
+pandas = "^2.0.1"
+pandas-schema = "^0.3.6"
+black = "^23.3.0"
 
 
 [build-system]
