@@ -30,7 +30,13 @@ def clean_data_format(data: pd.DataFrame, schema: pandas_schema.Schema):
     logger.warning("Errors detected and skip it:")
     for error in errors:
         logger.warning(error)
-    return data.drop(index=errors_index_rows)
+    cleaned_df = data.drop(index=errors_index_rows)
+    if cleaned_df.empty:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Data is corrupted or empty!, schema should be: {schema.get_column_names()}",
+        )
+    return cleaned_df
 
 
 def check_file_format(file: UploadFile | None = None):
