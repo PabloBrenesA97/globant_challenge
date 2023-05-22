@@ -9,11 +9,13 @@ import pandas as pd
 import os
 import pandas_schema
 from pandas_schemas import departments_schema, hired_employees_schema, jobs_schema
+from mangum import Mangum
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("my-api")
 
 app = FastAPI()
+handler = Mangum(app)
 
 AWS_BUCKET = "raw-challenge-globant-uploads"
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
