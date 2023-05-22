@@ -9,15 +9,17 @@ import pandas as pd
 import os
 import pandas_schema
 from pandas_schemas import departments_schema, hired_employees_schema, jobs_schema
+from mangum import Mangum
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("my-api")
 
 app = FastAPI()
+handler = Mangum(app)
 
 AWS_BUCKET = "raw-challenge-globant-uploads"
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_KEY_ID = os.getenv("KEY_ID")
+AWS_SECRET_KEY = os.getenv("SECRET_KEY")
 
 
 def clean_data_format(data: pd.DataFrame, schema: pandas_schema.Schema):
@@ -52,8 +54,8 @@ async def s3_remove_file(path_list: list):
         logger.info(f"Something was wrong. Deleting {path_list}")
         s3_client = boto3.client(
             "s3",
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            AWS_ACCESS_KEY_ID=AWS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_KEY,
         )
 
         response = s3_client.delete_objects(
@@ -70,8 +72,8 @@ async def s3_upload(contents: bytes, key: str):
     try:
         s3_resource = boto3.resource(
             "s3",
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            aws_access_key_id=AWS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_KEY,
         )
         s3_resource.Object(AWS_BUCKET, key).put(Body=contents.getvalue())
         return f"s3://{AWS_BUCKET}/{key}"  # from_path
@@ -96,7 +98,7 @@ async def redshift_upload(path_list: list, table_name: str, columns: str):
         )
         for path in path_list:
             cursor = conn.cursor()
-            query = f"COPY {table_name} {columns} FROM '{path}' CREDENTIALS 'aws_access_key_id={AWS_ACCESS_KEY_ID};aws_secret_access_key={AWS_SECRET_ACCESS_KEY}' IGNOREHEADER 1 TIMEFORMAT 'YYYY-MM-DDTHH:MI:SSZ' CSV;"
+            query = f"COPY {table_name} {columns} FROM '{path}' CREDENTIALS 'aws_access_key_id={AWS_KEY_ID};aws_secret_access_key={AWS_SECRET_KEY}' IGNOREHEADER 1 TIMEFORMAT 'YYYY-MM-DDTHH:MI:SSZ' CSV;"
             logger.info(
                 f"Executing query: COPY {table_name} {columns} FROM '{path} IGNOREHEADER 1 TIMEFORMAT 'YYYY-MM-DDTHH:MI:SSZ' CSV;"
             )
