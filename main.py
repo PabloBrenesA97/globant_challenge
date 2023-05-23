@@ -241,3 +241,36 @@ async def create_backup(table: TableNames):
         if cursor:
             cursor.close()
         raise HTTPException(status_code=400, detail=err.pgerror)
+
+
+@app.post("/api/v1/upload_parquet_backup")
+async def create_backup(s3_location: str, table: TableNames):
+    logger.info(f"Uploading {s3_location} to {table.value} table in Redshift db")
+    try:
+        conn = connect(
+            dbname=DB_NAME,
+            host=HOST,
+            port="5439",
+            user=USER,
+            password=PASSWORD,
+            connect_timeout=5,
+        )
+        cursor = conn.cursor()
+        query = f"COPY {table.value} FROM '{s3_location}' CREDENTIALS 'aws_access_key_id={AWS_KEY_ID};aws_secret_access_key={AWS_SECRET_KEY}' FORMAT AS PARQUET;"
+        logger.info(
+            f"Executing query: COPY {table.value} FROM '{s3_location}' FORMAT AS PARQUET;"
+        )
+        cursor.execute(query)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {
+            "status_code": 200,
+            "message": f"File: {s3_location} was uploaded into db correctly!",
+        }
+    except Exception as err:
+        if conn:
+            conn.close()
+        if cursor:
+            cursor.close()
+        raise HTTPException(status_code=400, detail=err.pgerror)
