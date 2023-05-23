@@ -10,6 +10,8 @@ import os
 import pandas_schema
 from pandas_schemas import departments_schema, hired_employees_schema, jobs_schema
 from mangum import Mangum
+from datetime import date
+from enum import Enum
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("my-api")
@@ -20,6 +22,16 @@ handler = Mangum(app)
 AWS_BUCKET = "raw-challenge-globant-uploads"
 AWS_KEY_ID = os.getenv("KEY_ID")
 AWS_SECRET_KEY = os.getenv("SECRET_KEY")
+DB_NAME = os.getenv("DB_NAME")
+HOST = os.getenv("DB_HOST")
+USER = os.getenv("DB_USER")
+PASSWORD = os.getenv("DB_PASSWORD")
+
+
+class TableNames(str, Enum):
+    jobs = "jobs"
+    hired_employees = "hired_employees"
+    departments = "departments"
 
 
 def clean_data_format(data: pd.DataFrame, schema: pandas_schema.Schema):
@@ -89,17 +101,13 @@ async def s3_upload(contents: bytes, key: str):
 
 async def redshift_upload(path_list: list, table_name: str, columns: str):
     logger.info(f"Uploading {path_list} to {table_name} table in Redshift db")
-    dbname = os.getenv("DB_NAME")
-    host = os.getenv("DB_HOST")
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASSWORD")
     try:
         conn = connect(
-            dbname=dbname,
-            host=host,
+            dbname=DB_NAME,
+            host=HOST,
             port="5439",
-            user=user,
-            password=password,
+            user=USER,
+            password=PASSWORD,
             connect_timeout=5,
         )
         for path in path_list:
@@ -109,7 +117,7 @@ async def redshift_upload(path_list: list, table_name: str, columns: str):
                 f"Executing query: COPY {table_name} {columns} FROM '{path} IGNOREHEADER 1 TIMEFORMAT 'YYYY-MM-DDTHH:MI:SSZ' CSV;"
             )
             cursor.execute(query)
-            result = conn.commit()
+            conn.commit()
         cursor.close()
         conn.close()
         return {
@@ -199,3 +207,37 @@ async def upload(file: UploadFile | None = None):
         table_name="hired_employees",
         columns="(id, name, datetime, department_id, job_id)",
     )
+
+
+@app.post("/api/v1/create_backup")
+async def create_backup(table: TableNames):
+    try:
+        conn = connect(
+            dbname=DB_NAME,
+            host=HOST,
+            port="5439",
+            user=USER,
+            password=PASSWORD,
+            connect_timeout=5,
+        )
+        cursor = conn.cursor()
+        today = date.today()
+        location = f"s3://{AWS_BUCKET}/backup_{table}/{today}_"
+        query = f"UNLOAD ('select * from {table}') TO '{location}' CREDENTIALS 'aws_access_key_id={AWS_KEY_ID};aws_secret_access_key={AWS_SECRET_KEY}' ALLOWOVERWRITE PARQUET"
+        logger.info(
+            f"Executing query: UNLOAD ('select * from {table}') TO {location} ALLOWOVERWRITE PARQUET"
+        )
+        cursor.execute(query)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {
+            "status_code": 200,
+            "message": f"Backup were created for {today} to table: {table}; S3 location: {location}*",
+        }
+    except Exception as err:
+        if conn:
+            conn.close()
+        if cursor:
+            cursor.close()
+        raise HTTPException(status_code=400, detail=err.pgerror)
