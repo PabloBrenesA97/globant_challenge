@@ -61,6 +61,8 @@ There will be our front door to send POST to upload -> hired_employees, jobs, an
 It has configure all the paths to use and the lambda connection function to execute our api and do its magic.
 
 #### 1.1.4 S3 + Redshift
+![db_diagram](docs/db_diagram.png)
+
 At this point, you will ask why this db ? and so on... Well, first why the db?
 - Redshift is a cloud-based, big data warehouse solution offered by Amazon, it can store petabytes of data
 in easy-to-access “clusters” that can be queried in parallel, sounds good isn't it?
